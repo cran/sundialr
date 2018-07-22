@@ -2,7 +2,7 @@ Package: sundialr
 Type: Package
 Title: An Interface to 'SUNDIALS' Ordinary Differential Equation (ODE)
         Solvers
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
     person("Satyaprakash", "Nayak", "", "sn248@cornell.edu", c("aut", "cre")),
     person("Scott D", "Cohen", "", "", c("ctb")),
@@ -32,7 +32,7 @@ RoxygenNote: 6.0.1
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2018-07-02 12:23:07 UTC; nayaks16
+Packaged: 2018-07-22 15:42:39 UTC; nayaks16
 Author: Satyaprakash Nayak [aut, cre],
   Scott D Cohen [ctb],
   Alan C Hindmarsh [ctb],
@@ -49,4 +49,4 @@ Author: Satyaprakash Nayak [aut, cre],
   Lawrence Livermore National Security [cph],
   Southern Methodist University [cph]
 Repository: CRAN
-Date/Publication: 2018-07-05 08:30:03 UTC
+Date/Publication: 2018-07-22 21:10:03 UTC
