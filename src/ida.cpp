@@ -1,4 +1,4 @@
-//   Copyright (c) 2020, Satyaprakash Nayak
+//   Copyright (c) 2024, Satyaprakash Nayak
 //
 //   Redistribution and use in source and binary forms, with or without
 //   modification, are permitted provided that the following conditions are
@@ -12,7 +12,7 @@
 //   the documentation and/or other materials provided with the
 //   distribution.
 //
-//   Neither the name of the <ORGANIZATION> nor the names of its
+//   Neither sundialr nor the names of its
 //   contributors may be used to endorse or promote products derived
 //   from this software without specific prior written permission.
 //
@@ -50,14 +50,14 @@ struct res_func{
 
 
 // function called by IDAInit if user inputs R function
-int res_function(realtype t, N_Vector yy, N_Vector yp, N_Vector rr, void* user_data){
+int res_function(sunrealtype t, N_Vector yy, N_Vector yp, N_Vector rr, void* user_data){
 
   // convert y to NumericVector y1
   int yy_len = NV_LENGTH_S(yy);
 
   // NumericVector analog of yy
   NumericVector yy1(yy_len);                       // filled with zeros
-  realtype *yy_ptr = N_VGetArrayPointer(yy);
+  sunrealtype *yy_ptr = N_VGetArrayPointer(yy);
   for (int i = 0; i < yy_len; i++){
     yy1[i] = yy_ptr[i];                           // Ith(y,i+1);
   }
@@ -65,7 +65,7 @@ int res_function(realtype t, N_Vector yy, N_Vector yp, N_Vector rr, void* user_d
   int yp_len = NV_LENGTH_S(yp);
   // NumericVector analog of yp
   NumericVector yp1(yp_len);                      // filled with zeros
-  realtype *yp_ptr = N_VGetArrayPointer(yp);
+  sunrealtype *yp_ptr = N_VGetArrayPointer(yp);
   for (int i = 0; i < yp_len; i++){
     yp1[i] = yp_ptr[i];                          // Ith(y,i+1);
   }
@@ -99,7 +99,7 @@ int res_function(realtype t, N_Vector yy, N_Vector yp, N_Vector rr, void* user_d
   }
 
   // convert NumericVector rr1 to N_Vector rr
-  realtype *rr_ptr = N_VGetArrayPointer(rr);
+  sunrealtype *rr_ptr = N_VGetArrayPointer(rr);
   for (int i = 0; i <  rr_len; i++){
     rr_ptr[i] = rr1[i];
   }
@@ -120,6 +120,7 @@ int res_function(realtype t, N_Vector yy, N_Vector yp, N_Vector rr, void* user_d
 //'@param Parameters Parameters input to ODEs
 //'@param reltolerance Relative Tolerance (a scalar, default value  = 1e-04)
 //'@param abstolerance Absolute Tolerance (a scalar or vector with length equal to ydot, default = 1e-04)
+//'@returns A data frame. First column is the time-vector, the other columns are values of y in order they are provided.
 // [[Rcpp::export]]
 NumericMatrix ida(NumericVector time_vector, NumericVector IC, NumericVector IRes, SEXP input_function,
                   NumericVector Parameters,
@@ -128,25 +129,31 @@ NumericMatrix ida(NumericVector time_vector, NumericVector IC, NumericVector IRe
 
   int time_vec_len = time_vector.length();
   int y_len = IC.length();
+  SUNContext sunctx;
+  SUNContext_Create(SUN_COMM_NULL, &sunctx);
 
   if(y_len != IRes.length()){
     stop("IC and IRes should be of same length");
   }
 
   int abstol_len = abstolerance.length();
+  // absolute tolerance is either length == 1 or equal to length of IC
+  // If abstol is not equal to 1 and abstol is not equal to IC, then stop
+  if(abstol_len != 1 && abstol_len != y_len){
+    stop("Absolute tolerance must be a scalar or a vector of same length as IC \n");
+  }
 
   int flag;
-  realtype reltol = reltolerance;
-
-  realtype T0 = RCONST(time_vector[0]);     //RCONST(0.0);  // Initial Time
+  sunrealtype reltol = reltolerance;
+  sunrealtype T0 = SUN_RCONST(time_vector[0]);     //RCONST(0.0);  // Initial Time
 
   double time;
   int NOUT = time_vec_len;
 
   // Set the vector absolute tolerance -----------------------------------------
   // abstol must be same length as IC
-  N_Vector abstol = N_VNew_Serial(abstol_len);
-  realtype *abstol_ptr = N_VGetArrayPointer(abstol);
+  N_Vector abstol = N_VNew_Serial(abstol_len, sunctx);
+  sunrealtype *abstol_ptr = N_VGetArrayPointer(abstol);
   if(abstol_len == 1){
     // if a scalar is provided - use it to make a vector with same values
     for (int i = 0; i<y_len; i++){
@@ -159,21 +166,17 @@ NumericMatrix ida(NumericVector time_vector, NumericVector IC, NumericVector IRe
       abstol_ptr[i] = abstolerance[i];
     }
   }
-  else if(abstol_len != 1 || abstol_len != y_len){
-
-    stop("Absolute tolerance must be a scalar or a vector of same length as IC \n");
-  }
   //----------------------------------------------------------------------------
   // // Set the initial values of y -----------------------------------------------
-  N_Vector yy0 = N_VNew_Serial(y_len);          // declared as yy0 to be consistent with example C code
-  realtype *yy0_ptr = N_VGetArrayPointer(yy0);
+  N_Vector yy0 = N_VNew_Serial(y_len, sunctx);          // declared as yy0 to be consistent with example C code
+  sunrealtype *yy0_ptr = N_VGetArrayPointer(yy0);
   for (int i = 0; i<y_len; i++){
     yy0_ptr[i] = IC[i];
   }
 
   // // Set the initial values of ydot --------------------------------------------
-  N_Vector yp0 = N_VNew_Serial(y_len);         // declared as yp0 to be consistent with example C code
-  realtype *yp0_ptr = N_VGetArrayPointer(yp0);
+  N_Vector yp0 = N_VNew_Serial(y_len, sunctx);         // declared as yp0 to be consistent with example C code
+  sunrealtype *yp0_ptr = N_VGetArrayPointer(yp0);
   for (int i = 0; i<y_len; i++){
     yp0_ptr[i] = IRes[i];
   }
@@ -183,7 +186,7 @@ NumericMatrix ida(NumericVector time_vector, NumericVector IC, NumericVector IRe
   ida_mem = NULL;
 
   /* Call IDACreate and IDAInit to initialize IDA memory */
-  ida_mem = IDACreate();
+  ida_mem = IDACreate(sunctx);
 
   if(check_retval((void *)ida_mem, "IDACreate", 0)) {
     stop("Stopping IDA, something went wrong in allocating memory!");
@@ -217,12 +220,12 @@ NumericMatrix ida(NumericVector time_vector, NumericVector IC, NumericVector IRe
 
     /* Create dense SUNMatrix for use in linear solves */
     sunindextype y_len_M = y_len;
-    SUNMatrix SM = SUNDenseMatrix(y_len_M, y_len_M);
+    SUNMatrix SM = SUNDenseMatrix(y_len_M, y_len_M, sunctx);
     if(check_retval((void *)SM, "SUNDenseMatrix", 0)) { stop("Stopping IDA, something went wrong in setting the dense matrix!"); }
 
 
     // Create dense SUNLinearSolver object for use by IDA
-    SUNLinearSolver LS = SUNLinSol_Dense(yy0, SM);
+    SUNLinearSolver LS = SUNLinSol_Dense(yy0, SM, sunctx);
     if(check_retval((void *)LS, "SUNLinSol_Dense", 0)) { stop("Stopping IDA, something went wrong in setting the linear solver!"); }
 
     /* Attach the matrix and linear solver */
@@ -236,7 +239,7 @@ NumericMatrix ida(NumericVector time_vector, NumericVector IC, NumericVector IRe
     /* Create Newton SUNNonlinearSolver object. IDA uses a
      * Newton SUNNonlinearSolver by default, so it is unecessary
      * to create it and attach it. */
-    SUNNonlinearSolver NLS = SUNNonlinSol_Newton(yy0);
+    SUNNonlinearSolver NLS = SUNNonlinSol_Newton(yy0, sunctx);
     if(check_retval((void *)NLS, "SUNNonlinSol_Newton", 0)) return(1);
 
     /* Attach the nonlinear solver */
@@ -246,7 +249,7 @@ NumericMatrix ida(NumericVector time_vector, NumericVector IC, NumericVector IRe
     /* In loop, call IDASolve, print results, and test for error.
      Break out of loop when NOUT preset output times have been reached. */
 
-    realtype tout;  // For output times
+    sunrealtype tout;  // For output times
 
     int y_len_1 = y_len + 1; // remove later
     NumericMatrix soln(Dimension(time_vec_len,y_len_1));  // remove later
@@ -292,6 +295,7 @@ NumericMatrix ida(NumericVector time_vector, NumericVector IC, NumericVector IRe
     N_VDestroy(abstol);
     N_VDestroy(yy0);
     N_VDestroy(yp0);
+    SUNContext_Free(&sunctx);
 
     return soln;
     break;

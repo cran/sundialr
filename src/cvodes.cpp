@@ -1,4 +1,4 @@
-//   Copyright (c) 2020, Satyaprakash Nayak
+//   Copyright (c) 2024, Satyaprakash Nayak
 //
 //   Redistribution and use in source and binary forms, with or without
 //   modification, are permitted provided that the following conditions are
@@ -12,7 +12,7 @@
 //   the documentation and/or other materials provided with the
 //   distribution.
 //
-//   Neither Satyaprakash Nayak nor the names of other
+//   Neither sundialr nor the names of its
 //   contributors may be used to endorse or promote products derived
 //   from this software without specific prior written permission.
 //
@@ -36,9 +36,9 @@
 #include <nvector/nvector_serial.h>    /* access to serial N_Vector            */
 #include <sunmatrix/sunmatrix_dense.h> /* access to dense SUNMatrix            */
 #include <sunlinsol/sunlinsol_dense.h> /* access to dense SUNLinearSolver      */
-#include <cvodes/cvodes_direct.h>      /* access to CVDls interface            */
-#include <sundials/sundials_types.h>   /* defs. of realtype, sunindextype      */
-#include <sundials/sundials_math.h>    /* definition of ABS */
+// #include <sundials/sundials_types.h>   /* defs. of realtype, sunindextype      */
+// #include <sundials/sundials_math.h>    /* definition of ABS */
+#include <sunmatrix/sunmatrix_dense.h>
 
 #include <check_retval.h>
 // #include "check_retval.cpp"
@@ -52,7 +52,6 @@ using namespace Rcpp;
 struct rhs_func_sens{
   Function rhs_eqn;
   NumericVector params;
-  // std::vector<double> params;
   double rtol;
   NumericVector atol;
 };
@@ -66,13 +65,13 @@ struct rhs_func_sens{
 // int ewt(N_Vector y, N_Vector w, void *user_data);
 
 // function called by CVodeInit if user inputs R function
-int rhs_function_sens(realtype t, N_Vector y, N_Vector ydot, void* user_data){
+int rhs_function_sens(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data){
 
-  // convert y to NumericVector y1
+  // convert y (N_Vector) to NumericVector y1
   int y_len = NV_LENGTH_S(y);
 
   NumericVector y1(y_len);    // filled with zeros
-  realtype *y_ptr = N_VGetArrayPointer(y);
+  sunrealtype *y_ptr = N_VGetArrayPointer(y);
   for (int i = 0; i < y_len; i++){
     y1[i] = y_ptr[i];
   }
@@ -80,7 +79,7 @@ int rhs_function_sens(realtype t, N_Vector y, N_Vector ydot, void* user_data){
   NumericVector ydot1(y_len);    // filled with zeros
 
   if(!user_data){
-    stop("Something went wrong, stopping!");
+    stop("Something went wrong in setting initial values, stopping!");
   }
 
   // cast void pointer to pointer to struct and assign rhs to a Function
@@ -96,22 +95,21 @@ int rhs_function_sens(realtype t, N_Vector y, N_Vector ydot, void* user_data){
       ydot1 = rhs_fun(t, y1, p_values);
     }
     else{
-      stop("Something went wrong, stopping!");
+      stop("Something went wrong in calculating derivatives, stopping!");
     }
   }
   else {
-    stop("Something went wrong, stopping!");
+    stop("Something went wrong in accessing the derivatives, stopping!");
   }
 
   // convert NumericVector ydot1 to N_Vector ydot
-  realtype *ydot_ptr = N_VGetArrayPointer(ydot);
+  sunrealtype *ydot_ptr = N_VGetArrayPointer(ydot);
   for (int i = 0; i<  y_len; i++){
     ydot_ptr[i] = ydot1[i];
     // Rcout << ydot_ptr[i] << "\n";
   }
 
-
-  // everything went smoothly
+  // If everything went smoothly, return 0
   return(0);
 }
 
@@ -119,7 +117,7 @@ int rhs_function_sens(realtype t, N_Vector y, N_Vector ydot, void* user_data){
 int ewt(N_Vector y, N_Vector w, void *user_data)
 {
   int i;
-  realtype yy, ww, rtol;
+  sunrealtype yy, ww, rtol;
   NumericVector atol;
 
   struct rhs_func_sens *my_rhs_fun = (struct rhs_func_sens*)user_data;
@@ -150,6 +148,7 @@ int ewt(N_Vector y, N_Vector w, void *user_data)
 //'@param abstolerance Absolute Tolerance (a scalar or vector with length equal to ydot, default = 1e-04)
 //'@param SensType Sensitivity Type - allowed values are Staggered (default)", "STG" (for Staggered) or "SIM" (for Simultaneous)
 //'@param ErrCon Error Control - allowed values are TRUE or FALSE (default)
+//'@returns A data frame. First column is the time-vector, the next y * p columns are sensitivities of y1 w.r.t all parameters, then y2 w.r.t all parameters etc. y is the state vector, p is the parameter vector
 //'@example /inst/examples/cvs_Roberts_dns.r
 // [[Rcpp::export]]
 NumericMatrix cvodes(NumericVector time_vector, NumericVector IC, SEXP input_function,
@@ -161,17 +160,27 @@ NumericMatrix cvodes(NumericVector time_vector, NumericVector IC, SEXP input_fun
   int y_len = IC.length();
   int abstol_len = abstolerance.length();
 
+  // absolute tolerance is either length == 1 or equal to length of IC
+  // If abstol is not equal to 1 and abstol is not equal to IC, then stop
+  if(abstol_len != 1 && abstol_len != y_len){
+    stop("Absolute tolerance must be a scalar or a vector of same length as IC \n");
+  }
+
+  SUNContext sunctx;
+  SUNContext_Create(SUN_COMM_NULL, &sunctx);
+
   int flag;
 
-  realtype T0 = RCONST(time_vector[0]);     //RCONST(0.0);  // Initial Time
+  sunrealtype T0 = SUN_RCONST(time_vector[0]);     //RCONST(0.0);  // Initial Time
 
   double time;
   int NOUT = time_vec_len;
 
   // Set the vector absolute tolerance -----------------------------------------
-  // abstol must be same length as IC
-  N_Vector abstol = N_VNew_Serial(abstol_len);
-  realtype *abstol_ptr = N_VGetArrayPointer(abstol);
+  // abstol must be same length as IC, if it not 1 or not unequal to y_len
+  N_Vector abstol = N_VNew_Serial(abstol_len, sunctx);
+  sunrealtype *abstol_ptr = N_VGetArrayPointer(abstol);
+
   if(abstol_len == 1){
     // if a scalar is provided - use it to make a vector with same values
     for (int i = 0; i<y_len; i++){
@@ -184,14 +193,10 @@ NumericMatrix cvodes(NumericVector time_vector, NumericVector IC, SEXP input_fun
       abstol_ptr[i] = abstolerance[i];
     }
   }
-  else if(abstol_len != 1 || abstol_len != y_len){
-
-    stop("Absolute tolerance must be a scalar or a vector of same length as IC \n");
-  }
   //----------------------------------------------------------------------------
   // // Set the initial conditions-------------------------------------------------
-  N_Vector y0 = N_VNew_Serial(y_len);
-  realtype *y0_ptr = N_VGetArrayPointer(y0);
+  N_Vector y0 = N_VNew_Serial(y_len, sunctx);
+  sunrealtype *y0_ptr = N_VGetArrayPointer(y0);
   for (int i = 0; i<y_len; i++){
     y0_ptr[i] = IC[i]; // NV_Ith_S(y0, i)
   }
@@ -219,7 +224,7 @@ NumericMatrix cvodes(NumericVector time_vector, NumericVector IC, SEXP input_fun
   yS = N_VCloneVectorArray(NS, y0);
 
   // Call CVodeCreate to create the solver memory and specify the Backward Differentiation Formula
-  cvode_mem = CVodeCreate(CV_BDF);
+  cvode_mem = CVodeCreate(CV_BDF, sunctx);
   if (check_retval((void *) cvode_mem, "CVodeCreate", 0)) { stop("Stopping cvodes, cannot allocate memory for CVODES!"); }
 
   //-- assign user input to the struct based on SEXP type of input_function
@@ -254,11 +259,11 @@ NumericMatrix cvodes(NumericVector time_vector, NumericVector IC, SEXP input_fun
 
     /* Create dense SUNMatrix */
     sunindextype y_len_M = y_len;
-    SUNMatrix SM = SUNDenseMatrix(y_len_M, y_len_M);
+    SUNMatrix SM = SUNDenseMatrix(y_len_M, y_len_M, sunctx);
     if (check_retval((void *)SM, "SUNDenseMatrix", 0)) { stop("Stopping cvodes, something went wrong in setting SUNDenseMatrix!"); }
 
     /* Create dense SUNLinearSolver */
-    SUNLinearSolver LS = SUNLinSol_Dense(y0, SM);
+    SUNLinearSolver LS = SUNLinSol_Dense(y0, SM, sunctx);
     if (check_retval((void *)LS, "SUNLinSol_Dense", 0)) { stop("Stopping cvodes, something went wrong in setting Linear Solver!"); }
 
     /* Attach the matrix and linear solver */
@@ -267,7 +272,7 @@ NumericMatrix cvodes(NumericVector time_vector, NumericVector IC, SEXP input_fun
 
 
     if (check_retval((void *)yS, "N_VCloneVectorArray", 0)) { stop("Stopping cvodes, something went wrong in setting Sensitivity Array!"); }
-    for (int is=0;is<NS;is++) N_VConst(RCONST(0.0), yS[is]);
+    for (int is=0;is<NS;is++) N_VConst(SUN_RCONST(0.0), yS[is]);
 
     /* Call CVodeSensInit1 to activate forward sensitivity computations
      and allocate internal memory for COVEDS related to sensitivity
@@ -312,8 +317,8 @@ NumericMatrix cvodes(NumericVector time_vector, NumericVector IC, SEXP input_fun
       sens(0,i+1) = 0.0;
     }
 
-    realtype tout;  // For output times
-    realtype *yS_ptr = NULL;
+    sunrealtype tout;  // For output times
+    sunrealtype *yS_ptr = NULL;
     for(int iout = 0; iout < NOUT-1; iout++) {
 
       // output times start from the index after initial time
@@ -352,6 +357,7 @@ NumericMatrix cvodes(NumericVector time_vector, NumericVector IC, SEXP input_fun
     CVodeFree(&cvode_mem);                   /* Free CVODES memory */
     SUNLinSolFree(LS);                       /* Free the linear solver memory */
     SUNMatDestroy(SM);                       /* Free the matrix memory */
+    SUNContext_Free(&sunctx);
 
     return sens;
     break;

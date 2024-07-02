@@ -1,4 +1,4 @@
-//   Copyright (c) 2020, Satyaprakash Nayak
+//   Copyright (c) 2024, Satyaprakash Nayak
 //
 //   Redistribution and use in source and binary forms, with or without
 //   modification, are permitted provided that the following conditions are
@@ -12,7 +12,7 @@
 //   the documentation and/or other materials provided with the
 //   distribution.
 //
-//   Neither the name of the <ORGANIZATION> nor the names of its
+//   Neither sundialr nor the names of its
 //   contributors may be used to endorse or promote products derived
 //   from this software without specific prior written permission.
 //
@@ -30,16 +30,16 @@
 
 #include <Rcpp.h>
 
-#include <cvode/cvode.h>               /* prototypes for CVODE fcts., consts. */
-#include <nvector/nvector_serial.h>    /* serial N_Vector types, fcts., macros */
-#include <sundials/sundials_types.h>   /* definition of type realtype */
+#include <cvode/cvode.h>             /* prototypes for CVODE fcts., consts. */
+#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
+#include <sundials/sundials_types.h> /* definition of type realtype */
 #include <sunmatrix/sunmatrix_dense.h>
 #include <sunlinsol/sunlinsol_dense.h>
 
 #include <check_retval.h>
 #include <rhs_func.h>
 
-#define Ith(v,i)    NV_Ith_S(v,i-1)         /* i-th vector component i=1..NEQ */
+#define Ith(v,i)    NV_Ith_S(v,i-1)  /* i-th vector component i=1..NEQ */
 
 using namespace Rcpp;
 
@@ -53,7 +53,8 @@ using namespace Rcpp;
 //'@param input_function Right Hand Side function of ODEs
 //'@param Parameters Parameters input to ODEs
 //'@param reltolerance Relative Tolerance (a scalar, default value  = 1e-04)
-//'@param abstolerance Absolute Tolerance (a scalar or vector with length equal to ydot, default = 1e-04)
+//'@param abstolerance Absolute Tolerance (a scalar or vector with length equal to ydot (dy/dx), default = 1e-04)
+//'@returns A data frame. First column is the time-vector, the other columns are values of y in order they are provided.
 //'@example /inst/examples/cv_Roberts_dns.r
 // [[Rcpp::export]]
 NumericMatrix cvode(NumericVector time_vector, NumericVector IC, SEXP input_function,
@@ -64,18 +65,27 @@ NumericMatrix cvode(NumericVector time_vector, NumericVector IC, SEXP input_func
   int y_len = IC.length();
   int abstol_len = abstolerance.length();
 
-  int flag;
-  realtype reltol = reltolerance;
+  // absolute tolerance is either length == 1 or equal to length of IC
+  // If abstol is not equal to 1 and abstol is not equal to IC, then stop
+  if(abstol_len != 1 && abstol_len != y_len){
+    stop("Absolute tolerance must be a scalar or a vector of same length as IC \n");
+  }
 
-  realtype T0 = RCONST(time_vector[0]);     //RCONST(0.0);  // Initial Time
+  SUNContext sunctx;
+  SUNContext_Create(SUN_COMM_NULL, &sunctx);
+
+  int flag;
+  sunrealtype reltol = reltolerance;
+
+  sunrealtype T0 = SUN_RCONST(time_vector[0]);     //RCONST(0.0);  // Initial Time
 
   double time;
   int NOUT = time_vec_len;
 
   // Set the vector absolute tolerance -----------------------------------------
   // abstol must be same length as IC
-  N_Vector abstol = N_VNew_Serial(abstol_len);
-  realtype *abstol_ptr = N_VGetArrayPointer(abstol);
+  N_Vector abstol = N_VNew_Serial(abstol_len, sunctx);
+  sunrealtype *abstol_ptr = N_VGetArrayPointer(abstol);
   if(abstol_len == 1){
     // if a scalar is provided - use it to make a vector with same values
     for (int i = 0; i<y_len; i++){
@@ -87,13 +97,10 @@ NumericMatrix cvode(NumericVector time_vector, NumericVector IC, SEXP input_func
       abstol_ptr[i] = abstolerance[i];
     }
   }
-  else if(abstol_len != 1 || abstol_len != y_len){
-    stop("Absolute tolerance must be a scalar or a vector of same length as IC \n");
-  }
 
   // Set the initial conditions-------------------------------------------------
-  N_Vector y0 = N_VNew_Serial(y_len);
-  realtype *y0_ptr = N_VGetArrayPointer(y0);
+  N_Vector y0 = N_VNew_Serial(y_len, sunctx);
+  sunrealtype *y0_ptr = N_VGetArrayPointer(y0);
   for (int i = 0; i<y_len; i++){
     y0_ptr[i] = IC[i]; // NV_Ith_S(y0, i)
   }
@@ -103,7 +110,7 @@ NumericMatrix cvode(NumericVector time_vector, NumericVector IC, SEXP input_func
   cvode_mem = NULL;
 
 
-  cvode_mem = CVodeCreate(CV_BDF);
+  cvode_mem = CVodeCreate(CV_BDF, sunctx);
   if (check_retval((void *) cvode_mem, "CVodeCreate", 0)) { stop("Stopping cvode!"); }
 
   //-- assign user input to the struct based on SEXP type of input_function
@@ -129,11 +136,11 @@ NumericMatrix cvode(NumericVector time_vector, NumericVector IC, SEXP input_func
 
     // Create dense SUNMatrix for use in linear solves
     sunindextype y_len_M = y_len;
-    SUNMatrix SM = SUNDenseMatrix(y_len_M, y_len_M);
+    SUNMatrix SM = SUNDenseMatrix(y_len_M, y_len_M, sunctx);
     if(check_retval((void *)SM, "SUNDenseMatrix", 0)) { stop("Stopping cvode, something went wrong in setting the dense matrix!"); }
 
     // Create dense SUNLinearSolver object for use by CVode
-    SUNLinearSolver LS = SUNLinSol_Dense(y0, SM);
+    SUNLinearSolver LS = SUNLinSol_Dense(y0, SM, sunctx);
     if(check_retval((void *)LS, "SUNLinSol_Dense", 0)) { stop("Stopping cvode, something went wrong in setting the linear solver!"); }
 
     // Call CVDlsSetLinearSolver to attach the matrix and linear solver to CVode
@@ -144,7 +151,7 @@ NumericMatrix cvode(NumericVector time_vector, NumericVector IC, SEXP input_func
     // Call CVodeInit to initialize the integrator memory and specify the
     // user's right hand side function in y'=f(time,y),
     // // the inital time T0, and the initial dependent variable vector y.
-    realtype tout;  // For output times
+    sunrealtype tout;  // For output times
 
     int y_len_1 = y_len + 1; // remove later
     NumericMatrix soln(Dimension(time_vec_len,y_len_1));  // remove later
@@ -183,6 +190,7 @@ NumericMatrix cvode(NumericVector time_vector, NumericVector IC, SEXP input_func
     SUNLinSolFree(LS);
     // Free the matrix memory
     SUNMatDestroy(SM);
+    SUNContext_Free(&sunctx);
 
     return soln;
     break;
