@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 
-[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/sundialr/)](https://cran.r-project.org/package=sundialr/) [![R-CMD-check](https://github.com/sn248/sundialr/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/sn248/sundialr/actions/workflows/R-CMD-check.yaml)
+[![CRAN](http://www.r-pkg.org/badges/version/sundialr)](https://cran.r-project.org/package=sundialr) [![R-CMD-check](https://github.com/sn248/sundialr/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/sn248/sundialr/actions/workflows/R-CMD-check.yaml)
 
 <!-- badges: end -->
 
@@ -21,6 +21,12 @@ to simulate the effect of multiple bolus doses of a drug in clinical pharmacokin
 vignette for more details.
 
 ## What's new?
+
+### Release 0.1.5
++ Updated the upstream `SUNDIALS` to version 7.1.1. 
++ Fixed the `pkgdown` website
++ There was a bug is assigning absolute tolerance in equations. Fixed now.
+
 ### Release 0.1.4.1
 + Fixed the linking bug due to multiple defined symbols. No other change.
 

@@ -57,150 +57,149 @@ using namespace Rcpp;
 //'@returns A data frame. First column is the time-vector, the other columns are values of y in order they are provided.
 //'@example /inst/examples/cv_Roberts_dns.r
 // [[Rcpp::export]]
-NumericMatrix cvode(NumericVector time_vector, NumericVector IC, SEXP input_function,
-                    NumericVector Parameters,
-                    double reltolerance = 0.0001, NumericVector abstolerance = 0.0001){
+NumericMatrix cvode(NumericVector time_vector, NumericVector IC,
+                     SEXP input_function,
+                     NumericVector Parameters,
+                     double reltolerance = 0.0001,
+                     NumericVector abstolerance = 0.0001){
 
-  int time_vec_len = time_vector.length();
-  int y_len = IC.length();
-  int abstol_len = abstolerance.length();
+   int flag;
 
-  // absolute tolerance is either length == 1 or equal to length of IC
-  // If abstol is not equal to 1 and abstol is not equal to IC, then stop
-  if(abstol_len != 1 && abstol_len != y_len){
-    stop("Absolute tolerance must be a scalar or a vector of same length as IC \n");
-  }
+   int time_vec_len = time_vector.length();
+   double time;
+   int NOUT = time_vec_len;
+   sunrealtype T0 = SUN_RCONST(time_vector[0]);  //RCONST(0.0); // Initial Time
 
-  SUNContext sunctx;
-  SUNContext_Create(SUN_COMM_NULL, &sunctx);
+   // Initial Conditions
+   int y_len = IC.length();
 
-  int flag;
-  sunrealtype reltol = reltolerance;
+   // Relative tolerance
+   sunrealtype reltol = reltolerance;
 
-  sunrealtype T0 = SUN_RCONST(time_vector[0]);     //RCONST(0.0);  // Initial Time
+   // Absolute tolerance
+   int abstol_len = abstolerance.length();
 
-  double time;
-  int NOUT = time_vec_len;
+   // absolute tolerance is either length == 1 or equal to length of IC
+   // If abstol is not equal to 1 and abstol is not equal to IC, then stop
+   if(abstol_len != 1 && abstol_len != y_len){
+     stop("Absolute tolerance must be a scalar or a vector of same length as IC\n");
+   }
 
-  // Set the vector absolute tolerance -----------------------------------------
-  // abstol must be same length as IC
-  N_Vector abstol = N_VNew_Serial(abstol_len, sunctx);
-  sunrealtype *abstol_ptr = N_VGetArrayPointer(abstol);
-  if(abstol_len == 1){
-    // if a scalar is provided - use it to make a vector with same values
-    for (int i = 0; i<y_len; i++){
-      abstol_ptr[i] = abstolerance[0];
-    }
-  }
-  else if (abstol_len == y_len){
-    for (int i = 0; i<abstol_len; i++){
-      abstol_ptr[i] = abstolerance[i];
-    }
-  }
+   // Set the vector absolute tolerance -----------------------------------------
+   // abstol must be same length as IC
+   SUNContext sunctx;
+   SUNContext_Create(SUN_COMM_NULL, &sunctx);
+   N_Vector abstol = N_VNew_Serial(y_len, sunctx);
+   sunrealtype *abstol_ptr = N_VGetArrayPointer(abstol);
+   if(abstol_len == 1){
+     // if a scalar is provided - use it to make a vector with same values
+     for (int i = 0; i<y_len; i++){
+       abstol_ptr[i] = abstolerance[0];
+     }
+   }
+   else if (abstol_len == y_len){
+     for (int i = 0; i<y_len; i++){
+       abstol_ptr[i] = abstolerance[i];
+     }
+   }
 
-  // Set the initial conditions-------------------------------------------------
-  N_Vector y0 = N_VNew_Serial(y_len, sunctx);
-  sunrealtype *y0_ptr = N_VGetArrayPointer(y0);
-  for (int i = 0; i<y_len; i++){
-    y0_ptr[i] = IC[i]; // NV_Ith_S(y0, i)
-  }
+   // Set the initial conditions-------------------------------------------------
+   N_Vector y0 = N_VNew_Serial(y_len, sunctx);
+   sunrealtype *y0_ptr = N_VGetArrayPointer(y0);
+   for (int i = 0; i<y_len; i++){
+     y0_ptr[i] = IC[i]; // NV_Ith_S(y0, i)
+   }
 
-  // Call CVodeCreate to create the solver memory and specify the Backward Differentiation Formula
-  void *cvode_mem;
-  cvode_mem = NULL;
+   // Call CVodeCreate to create the solver memory and specify the
+   // Backward Differentiation Formula (BDF)
+   void *cvode_mem;
+   cvode_mem = NULL;
 
+   cvode_mem = CVodeCreate(CV_BDF, sunctx);
+   if (check_retval((void *) cvode_mem, "CVodeCreate", 0)) {
+     stop("Something went wrong in assigning memory, stopping cvode!");
+   }
 
-  cvode_mem = CVodeCreate(CV_BDF, sunctx);
-  if (check_retval((void *) cvode_mem, "CVodeCreate", 0)) { stop("Stopping cvode!"); }
+   //-- assign user input to the struct based on SEXP type of input_function
+   if (!input_function){ stop("There is no input function, stopping!"); }
 
-  //-- assign user input to the struct based on SEXP type of input_function
-  if (!input_function){
-    stop("Something is wrong with input function, stopping!");
-  }
-  switch(TYPEOF(input_function)){
+   if(TYPEOF(input_function) != CLOSXP) { stop("Incorrect input function type - input function can be an R or Rcpp function"); }
 
-  case CLOSXP:{
+   struct rhs_func my_rhs_function = {input_function, Parameters};
 
-    struct rhs_func my_rhs_function = {input_function, Parameters};
+   // setting the user_data in rhs function
+   flag = CVodeSetUserData(cvode_mem, (void*)&my_rhs_function);
+   if (check_retval(&flag, "CVodeSetUserData", 1)) { stop("Stopping cvode, something went wrong in setting user data!"); }
 
-    // setting the user_data in rhs function
-    flag = CVodeSetUserData(cvode_mem, (void*)&my_rhs_function);
-    if (check_retval(&flag, "CVodeSetUserData", 1)) { stop("Stopping cvode, something went wrong in setting user data!"); }
+   flag = CVodeInit(cvode_mem, rhs_function, T0, y0);
+   if (check_retval(&flag, "CVodeInit", 1)) { stop("Stopping cvode, something went wrong in initializing CVODE!"); }
 
-    flag = CVodeInit(cvode_mem, rhs_function, T0, y0);
-    if (check_retval(&flag, "CVodeInit", 1)) { stop("Stopping cvode, something went wrong in initializing CVODE!"); }
+   // Call CVodeSVtolerances to specify the scalar relative tolerance and vector absolute tol
+   flag = CVodeSVtolerances(cvode_mem, reltol, abstol);
+   if (check_retval(&flag, "CVodeSVtolerances", 1)) { stop("Stopping cvode, something went wrong in setting solver tolerances!"); }
 
-    // Call CVodeSVtolerances to specify the scalar relative tolerance and vector absolute tol
-    flag = CVodeSVtolerances(cvode_mem, reltol, abstol);
-    if (check_retval(&flag, "CVodeSVtolerances", 1)) { stop("Stopping cvode, something went wrong in setting solver tolerances!"); }
+   // Create dense SUNMatrix for use in linear solves
+   sunindextype y_len_M = y_len;
+   SUNMatrix SM = SUNDenseMatrix(y_len_M, y_len_M, sunctx);
+   if(check_retval((void *)SM, "SUNDenseMatrix", 0)) { stop("Stopping cvode, something went wrong in setting the dense matrix!"); }
 
-    // Create dense SUNMatrix for use in linear solves
-    sunindextype y_len_M = y_len;
-    SUNMatrix SM = SUNDenseMatrix(y_len_M, y_len_M, sunctx);
-    if(check_retval((void *)SM, "SUNDenseMatrix", 0)) { stop("Stopping cvode, something went wrong in setting the dense matrix!"); }
+   // Create dense SUNLinearSolver object for use by CVode
+   SUNLinearSolver LS = SUNLinSol_Dense(y0, SM, sunctx);
+   if(check_retval((void *)LS, "SUNLinSol_Dense", 0)) { stop("Stopping cvode, something went wrong in setting the linear solver!"); }
 
-    // Create dense SUNLinearSolver object for use by CVode
-    SUNLinearSolver LS = SUNLinSol_Dense(y0, SM, sunctx);
-    if(check_retval((void *)LS, "SUNLinSol_Dense", 0)) { stop("Stopping cvode, something went wrong in setting the linear solver!"); }
+   // Call CVDlsSetLinearSolver to attach the matrix and linear solver to CVode
+   flag = CVodeSetLinearSolver(cvode_mem, LS, SM);
+   if(check_retval(&flag, "CVDlsSetLinearSolver", 1)) { stop("Stopping cvode, something went wrong in setting the linear solver!"); }
+   // NumericMatrix to store results - filled with 0.0
 
-    // Call CVDlsSetLinearSolver to attach the matrix and linear solver to CVode
-    flag = CVodeSetLinearSolver(cvode_mem, LS, SM);
-    if(check_retval(&flag, "CVDlsSetLinearSolver", 1)) { stop("Stopping cvode, something went wrong in setting the linear solver!"); }
-    // NumericMatrix to store results - filled with 0.0
+   // Call CVodeInit to initialize the integrator memory and specify the
+   // user's right hand side function in y'=f(time,y),
+   // // the inital time T0, and the initial dependent variable vector y.
+   sunrealtype tout;  // For output times
 
-    // Call CVodeInit to initialize the integrator memory and specify the
-    // user's right hand side function in y'=f(time,y),
-    // // the inital time T0, and the initial dependent variable vector y.
-    sunrealtype tout;  // For output times
+   int y_len_1 = y_len + 1; // remove later
+   NumericMatrix soln(Dimension(time_vec_len,y_len_1));  // remove later
 
-    int y_len_1 = y_len + 1; // remove later
-    NumericMatrix soln(Dimension(time_vec_len,y_len_1));  // remove later
+   // fill the first row of soln matrix with Initial Conditions
+   soln(0,0) = time_vector[0];   // get the first time value
+   for(int i = 0; i<y_len; i++){
+     soln(0,i+1) = IC[i];
+   }
 
-    // fill the first row of soln matrix with Initial Conditions
-    soln(0,0) = time_vector[0];   // get the first time value
-    for(int i = 0; i<y_len; i++){
-      soln(0,i+1) = IC[i];
-    }
+   for(int iout = 0; iout < NOUT-1; iout++) {
 
-    for(int iout = 0; iout < NOUT-1; iout++) {
+     // output times start from the index after initial time
+     tout = time_vector[iout+1];
 
-      // output times start from the index after initial time
-      tout = time_vector[iout+1];
+     flag = CVode(cvode_mem, tout, y0, &time, CV_NORMAL);
 
-      flag = CVode(cvode_mem, tout, y0, &time, CV_NORMAL);
+     // If something went wrong in solving it!
+     if (check_retval(&flag, "CVode", 1)) {
+       stop("Stopping CVODE, something went wrong in solving the system of ODEs!");
+     }
 
-      if (check_retval(&flag, "CVode", 1)) { stop("Stopping CVODE, something went wrong in solving the system of ODEs!"); } // Something went wrong in solving it!
-      if (flag == CV_SUCCESS) {
+     if (flag == CV_SUCCESS) {
+       // store results in soln matrix
+       soln(iout+1, 0) = time;           // first column is for time
+       for (int i = 0; i<y_len; i++){
+         soln(iout+1, i+1) = y0_ptr[i];
+       }
+     }
+   }
 
-        // store results in soln matrix
-        soln(iout+1, 0) = time;           // first column is for time
-        for (int i = 0; i<y_len; i++){
-          soln(iout+1, i+1) = y0_ptr[i];
-        }
-      }
-    }
+   // free the vectors
+   N_VDestroy(y0);
+   N_VDestroy(abstol);
 
-    // free the vectors
-    N_VDestroy(y0);
-    N_VDestroy(abstol);
+   // free integrator memory
+   CVodeFree(&cvode_mem);
+   // free the linear solver memory
+   SUNLinSolFree(LS);
+   // Free the matrix memory
+   SUNMatDestroy(SM);
+   SUNContext_Free(&sunctx);
 
-    // free integrator memory
-    CVodeFree(&cvode_mem);
-    // free the linear solver memory
-    SUNLinSolFree(LS);
-    // Free the matrix memory
-    SUNMatDestroy(SM);
-    SUNContext_Free(&sunctx);
-
-    return soln;
-    break;
-  }
-
-  default: {
-    stop("Incorrect input function type - input function can be an R or Rcpp function");
-  }
-
-  }
+   return soln;
 
 }
-//--- cvode definition ends ----------------------------------------------------
+ //--- cvode definition ends ----------------------------------------------------
