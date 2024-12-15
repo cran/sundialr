@@ -44,9 +44,9 @@
  * -----------------------------------------------------------------*/
 
 
-#define SUNDIALS_VERSION "7.0.0"
+#define SUNDIALS_VERSION "7.2.0"
 #define SUNDIALS_VERSION_MAJOR 7
-#define SUNDIALS_VERSION_MINOR 0
+#define SUNDIALS_VERSION_MINOR 2
 #define SUNDIALS_VERSION_PATCH 0
 #define SUNDIALS_VERSION_LABEL ""
 #define SUNDIALS_GIT_VERSION ""
@@ -57,9 +57,10 @@
  * -----------------------------------------------------------------*/
 
 #define SUNDIALS_C_COMPILER_HAS_BUILTIN_EXPECT
-/* #undef SUNDIALS_C_COMPILER_HAS_ATTRIBUTE_ASSUME */
-#define SUNDIALS_C_COMPILER_HAS_BUILTIN_ASSUME
+#define SUNDIALS_C_COMPILER_HAS_ATTRIBUTE_ASSUME
+/* #undef SUNDIALS_C_COMPILER_HAS_BUILTIN_ASSUME */
 /* #undef SUNDIALS_C_COMPILER_HAS_ASSUME */
+#define SUNDIALS_C_COMPILER_HAS_ATTRIBUTE_UNUSED
 
 /* Define precision of SUNDIALS data type 'sunrealtype'
  * Depending on the precision level, one of the following
@@ -104,9 +105,9 @@
 #define SUNDIALS_LOGGING_LEVEL 2
 
 /* Build metadata */
-#define SUN_C_COMPILER "AppleClang"
-#define SUN_C_COMPILER_VERSION "12.0.0.12000032"
-#define SUN_C_COMPILER_FLAGS ""
+#define SUN_C_COMPILER "GNU"
+#define SUN_C_COMPILER_VERSION "13.3.0"
+#define SUN_C_COMPILER_FLAGS "-fpic -g -O2 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -ffile-prefix-map=/build/r-base-4sITk6/r-base-4.4.2=. -fstack-protector-strong -fstack-clash-protection -Wformat -Werror=format-security -fcf-protection -fdebug-prefix-map=/build/r-base-4sITk6/r-base-4.4.2=/usr/src/r-base-4.4.2-1.2404.0 -Wdate-time -D_FORTIFY_SOURCE=3"
 
 #define SUN_CXX_COMPILER ""
 #define SUN_CXX_COMPILER_VERSION ""
@@ -116,10 +117,10 @@
 #define SUN_FORTRAN_COMPILER_VERSION ""
 #define SUN_FORTRAN_COMPILER_FLAGS ""
 
-#define SUN_BUILD_TYPE "RelWithDebInfo"
+#define SUN_BUILD_TYPE "Release"
 
-#define SUN_JOB_ID "20240610073427"
-#define SUN_JOB_START_TIME "20240610073427"
+#define SUN_JOB_ID "20241214193302"
+#define SUN_JOB_START_TIME "20241214193302"
 
 #define SUN_TPL_LIST ""
 #define SUN_TPL_LIST_SIZE ""
@@ -143,6 +144,9 @@
 /* HYPRE */
 /* #undef SUNDIALS_HYPRE_ENABLED */
 #define SUN_HYPRE_VERSION ""
+#define SUN_HYPRE_VERSION_MAJOR 
+#define SUN_HYPRE_VERSION_MINOR 
+#define SUN_HYPRE_VERSION_PATCH 
 
 /* KLU */
 /* #undef SUNDIALS_KLU_ENABLED */
@@ -220,7 +224,7 @@
 /* #undef SUNDIALS_GINKGO_BACKENDS_HIP */
 /* #undef SUNDIALS_GINKGO_BACKENDS_OMP */
 /* #undef SUNDIALS_GINKGO_BACKENDS_REF */
-/* #undef SUNDIALS_GINKGO_BACKENDS_DPCPP */
+/* #undef SUNDIALS_GINKGO_BACKENDS_SYCL */
 
 /* MAGMA backends */
 /* #undef SUNDIALS_MAGMA_BACKENDS_CUDA */
@@ -238,7 +242,7 @@
 /* #undef SUNDIALS_ONEMKL_USE_GETRS_LOOP */
 
 /* SUPERLUMT threading type */
-#define SUNDIALS_SUPERLUMT_THREAD_TYPE ""
+#define SUNDIALS_SUPERLUMT_THREAD_TYPE "PTHREAD"
 
 /* Trilinos with MPI is available, then
  *    #define SUNDIALS_TRILINOS_HAVE_MPI

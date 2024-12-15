@@ -2,7 +2,7 @@ Package: sundialr
 Type: Package
 Title: An Interface to 'SUNDIALS' Ordinary Differential Equation (ODE)
         Solvers
-Version: 0.1.5
+Version: 0.1.6
 Authors@R: c(
     person("Satyaprakash", "Nayak", "", "satyaprakash.nayak@gmail.com", c("aut", "cre","cph"), comment = c(ORCID = "0000-0001-7225-1317")),
     person("Lawrence Livermore National Security", role =  c("cph")),
@@ -22,10 +22,10 @@ Suggests: knitr, rmarkdown, testthat
 SystemRequirements: GNU make
 NeedsCompilation: yes
 VignetteBuilder: knitr
-Packaged: 2024-11-10 22:43:16 UTC; nayaks16
+Packaged: 2024-12-15 00:33:29 UTC; quantilogy
 Author: Satyaprakash Nayak [aut, cre, cph]
     (<https://orcid.org/0000-0001-7225-1317>),
   Lawrence Livermore National Security [cph],
   Southern Methodist University [cph]
 Repository: CRAN
-Date/Publication: 2024-11-11 12:10:02 UTC
+Date/Publication: 2024-12-15 03:30:02 UTC
