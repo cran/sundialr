@@ -28,15 +28,25 @@ ${CMAKE_BIN} \
     -D CMAKE_BUILD_TYPE=Release \
     -D BUILD_STATIC_LIBS=ON \
     -D BUILD_SHARED_LIBS=OFF \
+    -D CMAKE_INSTALL_LIBDIR=lib \
     -D CMAKE_INSTALL_PREFIX=../../inst \
     -D BUILD_TESTING=OFF \
-    -D CMAKE_C_STANDARD=11 \
+    -D CMAKE_C_STANDARD=99 \
     -D EXAMPLES_ENABLE_C=OFF \
     -D EXAMPLES_ENABLE_CXX=OFF \
     -D EXAMPLES_INSTALL=OFF \
   ${CMAKE_ADD_AR} ${CMAKE_ADD_RANLIB} ../sundials-src
 make -j${NCORES}
+if [ $? -ne 0 ]; then
+    echo "Make failed!"
+    exit 1
+fi
+
 make install
+if [ $? -ne 0 ]; then
+    echo "Make install failed!"
+    exit 1
+fi
 cd ..
 ##mv sundials/lib* sundials/lib
 mv sundials-src/src/* ./sundials

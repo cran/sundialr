@@ -1,4 +1,4 @@
-06e207bf8c3ff1c251fb92e8359c9a75 *DESCRIPTION
+4ee0a8be3084dd0c5cac7f20087c812f *DESCRIPTION
 cff34fc9ad2c12a96c1d613138b6631c *LICENSE
 4c7f5cc30f6ae666960538c302dc31f5 *NAMESPACE
 9959112be78180287486892083b544f6 *NEWS
@@ -6,7 +6,7 @@ cff34fc9ad2c12a96c1d613138b6631c *LICENSE
 30e1d9256c2edc73a62256cc54e17487 *R/zzz.R
 2b6f113197f97d34f3b22a379ec70633 *README.md
 4d01c754346269e47dba85c34319b586 *build/vignette.rds
-b7c71dff361024a90ced2185f531823e *cleanup
+1009f30fcf26281fd758736a1f311937 *cleanup
 d2579e47c348a2aca14284e22e41f09c *cleanup.win
 b05ca5b8bac6cac7c8d1b6f315bc9b56 *configure
 6b28faf62b21cc04105a58d3f3b0cb97 *configure.ac
@@ -15,7 +15,7 @@ cbbe1593022e7259a65f7fd79e0cd0b9 *inst/CITATION
 4e9464d55da9159d3764f316aedd4ff8 *inst/COPYRIGHTS
 12769b98d4f0a2d5a68d4ef6e68bc9a3 *inst/doc/my-vignette.R
 8f88f4ab604393e4e09546becc35734b *inst/doc/my-vignette.Rmd
-2416e1b4f704cb23ef187f0732d7e27e *inst/doc/my-vignette.html
+58a544ff950e1565db3e1a07cc175f55 *inst/doc/my-vignette.html
 c4623331ef27743f9457be275d7fd01c *inst/examples/cv_Roberts_dns.r
 77f8b7a15a0955fd460a63363ab010b8 *inst/examples/cvs_Roberts_dns.r
 f81917359a2b1ae69daacb344d8faaef *inst/examples/cvsolve_1D.r
@@ -70,7 +70,7 @@ c91ea27791494d304df2f270321742b1 *inst/include/kinsol/kinsol_ls.h
 d86e4af72e48793463305f91975a7e7f *inst/include/sundials/sundials_adaptcontroller.h
 a6648517fdc30dd6865c3e79c6d64f36 *inst/include/sundials/sundials_band.h
 5d073e5595f6e2eab64dd5c5ff4612d6 *inst/include/sundials/sundials_base.hpp
-a47d45538a077d8794c2b1b7b21fac72 *inst/include/sundials/sundials_config.h
+4d292ec06abcdd83bca812c5bf403bbe *inst/include/sundials/sundials_config.h
 7b1bf51ac6d1dbc9832c409ddd19f3ee *inst/include/sundials/sundials_context.h
 0b16311a2ec92d6fed9876295fd7aa7a *inst/include/sundials/sundials_context.hpp
 bf612a5b700f83073f3b49c79ec2a209 *inst/include/sundials/sundials_convertibleto.hpp
@@ -130,10 +130,10 @@ b1b25f2410daba3786aa3a152ffeb638 *src/ida.cpp
 a58996e86f011b1556327750466bcba1 *src/scripts/cmake_config.sh
 0cdd06c2ec777942c4cfbf786786006f *src/scripts/r_config.sh
 1d870f1fefde78f60fb7453775098d61 *src/scripts/sundialr_cleanup.sh
-eea59cde513c60a1cca799289046204a *src/scripts/sundials_download.sh
+7fc11584049757da5ae612258a624e36 *src/scripts/sundials_download.sh
 aefc115e6dc022adb486fe30276d089e *src/utils/sortTimes.cpp
 64adb2d944f819b6d4cf556b99879c77 *tests/testthat.R
 7a17ab18e329bbddaa32ce83ef13a5f7 *tests/testthat/test-cvode.r
 fb6c8f750b827eea4f57c70081d73445 *tests/testthat/test-cvodes.r
-fb1f911200afee7f1e0b3740fd368781 *tools/cmake_call.sh
+3d678198764a7c6c57ab069dc2829521 *tools/cmake_call.sh
 8f88f4ab604393e4e09546becc35734b *vignettes/my-vignette.Rmd
