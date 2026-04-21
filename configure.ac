@@ -19,14 +19,16 @@ AC_PROG_CXX
 ## Default to build from source
 need_to_build="yes"
 ## So do we need to build
-  if [ "${need_to_build}" != "no" ]; then
-      	have_cmake="$(type -p cmake)"
-	if [ "${have_cmake}" = "" ]; then
-		    . src/scripts/cmake_config.sh
+if test x"${need_to_build}" != x"no"; then
+      	AC_PATH_PROG(have_cmake, cmake, no)
+	# CRAN fix: use POSIX-compliant single = in test; == is a bashism
+	if test x"${have_cmake}" = x"no"; then
+		. src/scripts/cmake_config.sh
 	fi
   tools/cmake_call.sh
   sundialr_include=""
   sundialr_libs="-lsundials_idas -lsundials_cvodes -lsundials_nvecserial -lsundials_sunlinsoldense -lsundials_sunmatrixdense -lsundials_core -lm"
+  ## tools/remove_static_libs.sh
 fi
 ## Now use all the values
 AC_SUBST([SUNDIALR_CPPFLAGS],["$sundialr_include"])
