@@ -1,4 +1,4 @@
-//   Copyright (c) 2024, Satyaprakash Nayak
+//   Copyright (c) 2016-2026, Satyaprakash Nayak
 //
 //   Redistribution and use in source and binary forms, with or without
 //   modification, are permitted provided that the following conditions are
@@ -30,41 +30,41 @@
 
 #include <Rcpp.h>
 
-// --- Function definition for check_flag() ------------------------------------
+// --- Function definition for check_retval() ----------------------------------
 /*
- * Check function return value...
- *   opt == 0 means SUNDIALS function allocates memory so check if
- *            returned NULL pointer
- *   opt == 1 means SUNDIALS function returns an integer value so check if
- *            retval < 0
- *   opt == 2 means function allocates memory so check if returned
- *            NULL pointer
+ * Check a SUNDIALS call's outcome. Two overloads, one per kind of return value:
+ *
+ *   check_retval(int flag,          const char*)  fails when flag < 0
+ *                                                 (functions returning a code)
+ *   check_retval(const void *ptr,   const char*)  fails when ptr == NULL
+ *                                                 (allocating functions)
+ *
+ * Both return 1 on failure and 0 otherwise. Neither prints anything: the caller
+ * raises the failure with sundials_stop(), which reports the message recorded by
+ * the SUNDIALS error handler - naming the function, file, line and cause - so
+ * printing here as well would duplicate that. funcname is kept in the signature
+ * because it documents the call site.
+ *
+ * The compiler dispatches on the argument's type, so the two kinds of check can
+ * no longer be confused. This replaced an earlier single function that took an
+ * `int opt` selecting the check; opt had to match the TYPE of the value passed
+ * and nothing enforced it, so a wrong pairing failed silently in both
+ * directions - passing a pointer where a code was expected dereferenced it, and
+ * passing &flag for the NULL check tested an address that is never NULL. Pass
+ * the flag or the pointer itself; do not take its address or cast it.
  */
 
-int check_retval(void *returnvalue, const char *funcname, int opt)
+int check_retval(int flag, const char *funcname)
 {
-  int *retval;
+  /* An integer return code signals failure when negative. */
+  if (flag < 0) { return(1); }
+  return(0);
+}
 
-  /* Check if SUNDIALS function returned NULL pointer - no memory allocated */
-  if (opt == 0 && returnvalue == NULL) {
-    Rprintf("\nSUNDIALS_ERROR: %s() failed - returned NULL pointer\n\n",
-            funcname);
-    return(1); }
-
-  /* Check if retval < 0 */
-  else if (opt == 1) {
-    retval = (int *) returnvalue;
-    if (*retval < 0) {
-      Rprintf("\nSUNDIALS_ERROR: %s() failed with retval = %d\n\n",
-              funcname, *retval);
-      return(1); }}
-
-  /* Check if function returned NULL pointer - no memory allocated */
-  else if (opt == 2 && returnvalue == NULL) {
-    Rprintf("\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n",
-            funcname);
-    return(1); }
-
+int check_retval(const void *returnvalue, const char *funcname)
+{
+  /* An allocating call signals failure by returning a NULL pointer. */
+  if (returnvalue == NULL) { return(1); }
   return(0);
 }
 

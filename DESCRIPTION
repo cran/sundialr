@@ -2,11 +2,13 @@ Package: sundialr
 Type: Package
 Title: An Interface to 'SUNDIALS' Ordinary Differential Equation (ODE)
         Solvers
-Version: 0.1.7
+Version: 0.2.0
+Date: 2026-07-31
 Authors@R: c(
     person("Satyaprakash", "Nayak", email = "satyaprakash.nayak@gmail.com", role = c("aut", "cre","cph"), comment = c(ORCID = "0000-0001-7225-1317")),
     person("Lawrence Livermore National Security", role =  c("cph")),
-    person("Southern Methodist University", role =  c("cph"))
+    person("Southern Methodist University", role =  c("cph")),
+    person("University of Maryland Baltimore County", role =  c("cph"))
     )
 Maintainer: Satyaprakash Nayak <satyaprakash.nayak@gmail.com>
 URL: https://github.com/sn248/sundialr,
@@ -17,15 +19,17 @@ License: BSD_3_clause + file LICENSE
 Copyright: file COPYRIGHTS
 Imports: Rcpp (>= 1.0.12)
 LinkingTo: Rcpp, RcppArmadillo
-RoxygenNote: 7.3.3
 Suggests: knitr, rmarkdown, testthat
 SystemRequirements: cmake
+Encoding: UTF-8
 NeedsCompilation: yes
 VignetteBuilder: knitr
-Packaged: 2026-04-19 02:36:16 UTC; quantilogy
+Config/roxygen2/version: 8.0.0
+Packaged: 2026-07-31 20:57:30 UTC; quantilogy
 Author: Satyaprakash Nayak [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0001-7225-1317>),
   Lawrence Livermore National Security [cph],
-  Southern Methodist University [cph]
+  Southern Methodist University [cph],
+  University of Maryland Baltimore County [cph]
 Repository: CRAN
-Date/Publication: 2026-04-21 20:50:03 UTC
+Date/Publication: 2026-08-07 13:20:02 UTC

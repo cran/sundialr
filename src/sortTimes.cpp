@@ -1,4 +1,4 @@
-//   Copyright (c) 2024, Satyaprakash Nayak
+//   Copyright (c) 2016-2026, Satyaprakash Nayak
 //
 //   Redistribution and use in source and binary forms, with or without
 //   modification, are permitted provided that the following conditions are
@@ -47,9 +47,11 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 
+#include "sortTimes.h"
+
 using namespace arma;
-// not exported
-////[[Rcpp::export]]
+
+// not exported to R; declared in sortTimes.h and called from cvsolve.cpp
 Rcpp::NumericMatrix sorted_times(Rcpp::DataFrame TDOSE, Rcpp::NumericVector TSAMP, int NSTATES){
 
   // Dosing dataframe - 1st column - index of species being dosed + 1
@@ -118,13 +120,3 @@ Rcpp::NumericMatrix sorted_times(Rcpp::DataFrame TDOSE, Rcpp::NumericVector TSAM
   return TOUT1;
 
 }
-
-// /*** R
-// TDOSE <- DOSE <- data.frame(ID = 2, TIMES = c(0,10, 20, 30), VAL = 100)
-// TSAMP <- seq(from = 0, to = 50, by = 10)
-// TDOSE
-// TSAMP
-// sorted_mat(TDOSE,TSAMP)
-// */
-
-
