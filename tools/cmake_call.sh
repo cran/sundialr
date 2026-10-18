@@ -45,10 +45,10 @@ ${CMAKE_BIN} \
     -D CMAKE_INSTALL_PREFIX=../../inst \
     -D BUILD_TESTING=OFF \
     -D CMAKE_C_STANDARD=99 \
-    -D EXAMPLES_ENABLE_C=OFF \
-    -D EXAMPLES_ENABLE_CXX=OFF \
+    -D SUNDIALS_ENABLE_C_EXAMPLES=OFF \
+    -D SUNDIALS_ENABLE_CXX_EXAMPLES=OFF \
     -D SUNDIALS_LOGGING_LEVEL=0 \
-    -D SUNDIALS_ENABLE_ARKODE=OFF \
+    -D SUNDIALS_ENABLE_ARKODE=ON \
     -D SUNDIALS_ENABLE_KINSOL=OFF \
     -D CMAKE_C_FLAGS="${CFLAGS} -Wno-deprecated-declarations" \
   ${CMAKE_ADD_AR} ${CMAKE_ADD_RANLIB} ../sundials-src
@@ -64,6 +64,26 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 cd ..
+
+# WebAssembly fix: SUNDIALS 7.x bakes the shared object libraries (nvecserial,
+# sunmatrix*, sunlinsol*, ...) into every package archive, so libsundials_idas.a
+# and libsundials_cvodes.a ship duplicate copies of the same objects. Native ld
+# extracts archive members on demand and ignores the extras, but Emscripten links
+# the package .so as a side module with --whole-archive and every copy collides
+# ("wasm-ld: error: duplicate symbol: N_VNewEmpty_Serial"). Strip the duplicates
+# so each object is defined exactly once.
+#
+# Its exit status is deliberately NOT checked, and the script always exits 0
+# anyway: it runs after `make install` but before the cleanup at the end of this
+# file, so aborting here strands sundials-src/ and sundials-build/ in the source
+# tree, which then ship inside the tarball and break the *next* build in a way
+# that points at cran_patches.sh (this is what commit 050c575 did to Windows and
+# macOS). A skipped dedupe leaves only the wasm build broken.
+#
+# AR/RANLIB are set by scripts/r_config.sh above but not exported, so pass them
+# through explicitly - a cross build needs its own archiver (emar/emranlib), as
+# host ranlib cannot index wasm objects.
+AR="${AR}" RANLIB="${RANLIB}" sh ./scripts/dedupe_static_libs.sh ../inst/lib
 
 # Reproducibility fix: cmake stamps the generated sundials_config.h with the
 # compiler, its full flag list and a build timestamp. Those differ on every
@@ -82,6 +102,37 @@ if [ -f "${SUNDIALS_CONFIG_H}" ]; then
         exit 1
     fi
 fi
+
+# Line-ending fix: sundials_config.h and sundials_export.h are the only two
+# headers cmake *generates*. The other 42 in inst/include/sundials are copied
+# verbatim out of the bundled tarball and so keep its LF endings, which is why
+# these two alone came out CRLF on Windows and were reported by
+#   checking line endings in C/C++/Fortran sources/headers ... NOTE
+# Force both to LF so the installed headers are byte-identical whatever host
+# built them, as the reproducibility fix above already requires.
+#
+# POSIX `tr`, not Perl: this step used `perl -Mopen=IO,:raw`, and the `open`
+# module is not in perl-base, so a minimal image (Debian/Ubuntu with only the
+# essential perl-base, as rocker/r-ver is) failed the whole install here
+# ("Can't locate open.pm in @INC"). `tr -d '\r'` behaves the same in GNU tr
+# (Linux, Rtools) and BSD tr (macOS), and the MSYS2 tools Rtools ships read and
+# write in binary mode, so there is no text-layer CR translation to defeat --
+# the reason the Perl version needed `:raw`. These generated headers contain
+# no lone CRs, so deleting every CR is the same as converting CRLF to LF. The
+# write goes to a temporary file and is moved over the original only on success.
+for SUNDIALS_GEN_H in "../inst/include/sundials/sundials_config.h" \
+                      "../inst/include/sundials/sundials_export.h"; do
+    if [ -f "${SUNDIALS_GEN_H}" ]; then
+        if tr -d '\r' < "${SUNDIALS_GEN_H}" > "${SUNDIALS_GEN_H}.lf" &&
+           mv "${SUNDIALS_GEN_H}.lf" "${SUNDIALS_GEN_H}"; then
+            :
+        else
+            rm -f "${SUNDIALS_GEN_H}.lf"
+            echo "Normalising line endings in ${SUNDIALS_GEN_H} failed!"
+            exit 1
+        fi
+    fi
+done
 
 ##mv sundials/lib* sundials/lib
 mv sundials-src/src/* ./sundials

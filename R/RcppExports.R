@@ -5,28 +5,60 @@
     invisible(.Call('_sundialr_register_capi', PACKAGE = 'sundialr'))
 }
 
-.capi_test_decay <- function(times, y0, k, tol_mode, reinit_each) {
-    .Call('_sundialr_capi_test_decay', PACKAGE = 'sundialr', times, y0, k, tol_mode, reinit_each)
+.capi_test_decay <- function(times, y0, k, tol_mode, reinit_each, solver = 0L) {
+    .Call('_sundialr_capi_test_decay', PACKAGE = 'sundialr', times, y0, k, tol_mode, reinit_each, solver)
 }
 
-.capi_test_twocmt <- function(times, y10, k1, k2, use_jac) {
-    .Call('_sundialr_capi_test_twocmt', PACKAGE = 'sundialr', times, y10, k1, k2, use_jac)
+.capi_test_twocmt <- function(times, y10, k1, k2, use_jac, solver = 0L) {
+    .Call('_sundialr_capi_test_twocmt', PACKAGE = 'sundialr', times, y10, k1, k2, use_jac, solver)
 }
 
-.capi_test_force_error <- function() {
-    .Call('_sundialr_capi_test_force_error', PACKAGE = 'sundialr')
+.capi_test_force_error <- function(solver = 0L) {
+    .Call('_sundialr_capi_test_force_error', PACKAGE = 'sundialr', solver)
 }
 
-.capi_test_num_steps <- function(tout, y0, k) {
-    .Call('_sundialr_capi_test_num_steps', PACKAGE = 'sundialr', tout, y0, k)
+.capi_test_num_steps <- function(tout, y0, k, solver = 0L) {
+    .Call('_sundialr_capi_test_num_steps', PACKAGE = 'sundialr', tout, y0, k, solver)
 }
 
-.capi_test_clean_err <- function() {
-    .Call('_sundialr_capi_test_clean_err', PACKAGE = 'sundialr')
+.capi_test_clean_err <- function(solver = 0L) {
+    .Call('_sundialr_capi_test_clean_err', PACKAGE = 'sundialr', solver)
 }
 
 .capi_test_abi <- function() {
     .Call('_sundialr_capi_test_abi', PACKAGE = 'sundialr')
+}
+
+.capi_test_set_udata <- function(times, y0, k1, k2, solver = 0L) {
+    .Call('_sundialr_capi_test_set_udata', PACKAGE = 'sundialr', times, y0, k1, k2, solver)
+}
+
+.capi_test_tight_loop <- function(nseg, dt, y0, k, solver = 0L) {
+    .Call('_sundialr_capi_test_tight_loop', PACKAGE = 'sundialr', nseg, dt, y0, k, solver)
+}
+
+.capi_test_reset_stats <- function(solver = 0L) {
+    .Call('_sundialr_capi_test_reset_stats', PACKAGE = 'sundialr', solver)
+}
+
+.capi_test_concurrent <- function(times, y0, k1, k2, solver = 0L) {
+    .Call('_sundialr_capi_test_concurrent', PACKAGE = 'sundialr', times, y0, k1, k2, solver)
+}
+
+.capi_test_arkode_method <- function(times, y0, k, order, table) {
+    .Call('_sundialr_capi_test_arkode_method', PACKAGE = 'sundialr', times, y0, k, order, table)
+}
+
+.capi_test_arkode_method_errors <- function() {
+    .Call('_sundialr_capi_test_arkode_method_errors', PACKAGE = 'sundialr')
+}
+
+.capi_test_arkode_cold <- function(times_a, times_b, p_a, p_b, y_a, y_b, use_jac, tol_mode) {
+    .Call('_sundialr_capi_test_arkode_cold', PACKAGE = 'sundialr', times_a, times_b, p_a, p_b, y_a, y_b, use_jac, tol_mode)
+}
+
+.capi_test_robertson <- function(times, use_jac, solver = 0L) {
+    .Call('_sundialr_capi_test_robertson', PACKAGE = 'sundialr', times, use_jac, solver)
 }
 
 #'cvode
@@ -66,7 +98,7 @@ cvodes <- function(time_vector, IC, input_function, Parameters, reltolerance = 0
 
 #'cvsolve
 #'
-#'CVSOLVE solver to solve stiff ODEs with discontinuties
+#'CVSOLVE solver to solve stiff ODEs with discontinuities
 #'@param time_vector time vector
 #'@param IC Initial Conditions
 #'@param input_function Right Hand Side function of ODEs
@@ -86,7 +118,7 @@ cvsolve <- function(time_vector, IC, input_function, Parameters, Events = NULL, 
 #' IDA solver to solve stiff DAEs
 #'@param time_vector time vector
 #'@param IC Initial Value of y
-#'@param IRes Inital Value of ydot
+#'@param IRes Initial value of ydot
 #'@param input_function Right Hand Side function of DAEs
 #'@param Parameters Parameters input to ODEs
 #'@param reltolerance Relative Tolerance (a scalar, default value  = 1e-04)

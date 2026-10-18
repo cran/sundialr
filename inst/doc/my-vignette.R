@@ -79,5 +79,21 @@ df2 <- sundialr::cvsolve(TSAMP, c(1), ODE_R, params, TDOSE)  # solving with disc
 ## first column is time, second column is the state
 time <- df2[,1]
 y1 <- df2[,2]
-plot(time, y1, type = "l", lty = 1, main = "An ODE system with discontinuties", frame.plot = F)   
+plot(time, y1, type = "l", lty = 1, main = "An ODE system with discontinuities", frame.plot = F)   
+
+## ----arkode-check, fig.height=5, fig.width=7, fig.align="C"-------------------
+times <- seq(from = 0, to = 48, by = 0.25)
+dose_times <- c(0, 12, 24, 36)
+k_el <- 0.1
+
+C_arkode <- arkode_doses(times, dose_times, dose = 100, k = k_el)
+C_exact <- sapply(times, function(t) {
+  given <- dose_times[dose_times <= t]
+  sum(100 * exp(-k_el * (t - given)))
+})
+
+max(abs(C_arkode - C_exact))     # largest absolute error
+
+plot(times, C_arkode, type = "l", lty = 1, frame.plot = FALSE,
+     xlab = "time", ylab = "C", main = "Repeated doses solved with ARKODE")
 

@@ -46,9 +46,9 @@
  * Define SUNDIALS version numbers
  * -----------------------------------------------------------------*/
 
-#define SUNDIALS_VERSION "7.8.0"
+#define SUNDIALS_VERSION "7.9.0"
 #define SUNDIALS_VERSION_MAJOR 7
-#define SUNDIALS_VERSION_MINOR 8
+#define SUNDIALS_VERSION_MINOR 9
 #define SUNDIALS_VERSION_PATCH 0
 #define SUNDIALS_VERSION_LABEL ""
 #define SUNDIALS_GIT_VERSION ""
@@ -282,6 +282,7 @@
  * SUNDIALS modules enabled
  * -----------------------------------------------------------------*/
 
+#define SUNDIALS_ARKODE 1
 #define SUNDIALS_CVODE 1
 #define SUNDIALS_CVODES 1
 #define SUNDIALS_IDA 1
