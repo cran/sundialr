@@ -12,7 +12,7 @@
 
 <meta name="author" content="Satyaprakash Nayak" />
 
-<meta name="date" content="2026-10-17" />
+<meta name="date" content="2026-11-22" />
 
 <title>sundialr - An Interface to ‘SUNDIALS’ Ordinary Differential Equation (ODE) Solvers</title>
 
@@ -342,7 +342,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">sundialr - An Interface to ‘SUNDIALS’
 Ordinary Differential Equation (ODE) Solvers</h1>
 <h4 class="author">Satyaprakash Nayak</h4>
-<h4 class="date">2026-10-17</h4>
+<h4 class="date">2026-11-22</h4>
 
 
 
@@ -789,9 +789,7 @@ columns is for time. Currently, the sensitivity of every entity is
 calculated with respect to every parameter in model. For example, for
 the current model with <code>3</code> entities (ODEs) and <code>3</code>
 parameters, a total of <code>9</code> sensitivities are calculated at
-each output time, i.e. <code>y1</code> w.r.t <code>p1</code>,
-<code>p2</code>, <code>p3</code>, <code>y2</code> w.r.t.
-<code>p1</code>, <code>p2</code>, <code>p3</code> and so on. The first 3
+each output time, one for each pair of entity and parameter. The first 3
 (<code>length(y)</code>) columns give sensitivity w.r.t the first
 parameter, the next 3 (<code>length(y)</code>) columns give sensitivity
 w.r.t the second parameter and so on.</p>
@@ -801,7 +799,10 @@ described above, the first column gives output time, the next
 <code>y2</code> and <code>y3</code> w.r.t first parameter (say
 <code>p1</code>), the next three columns provide sensitivity of
 <code>y1</code>, <code>y2</code> and <code>y3</code> w.r.t. the second
-parameter (<code>p2</code>) and so on. The output Sensitivity Matrix is
+parameter (<code>p2</code>) and so on. The state solution itself is
+attached to the output as the attribute <code>&quot;solution&quot;</code>, laid
+out like the output of <code>cvode</code> and retrieved with
+<code>attr(df1, &quot;solution&quot;)</code>. The output Sensitivity Matrix is
 given below. The sensitivity values match with the values provided in
 the <code>CVODES</code> documentation.</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="sc">&gt;</span> df1</span>
